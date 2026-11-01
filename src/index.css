@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+/* ─── Font Stacks via @theme ────────────────────────── */
+@theme {
+  --font-sans:    'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ─── Keyframes ─────────────────────────────────────── */
+@keyframes shake-bump {
+  0%   { transform: translateX(0)    scale(1);    }
+  12%  { transform: translateX(-7px) scale(1.01); }
+  24%  { transform: translateX(7px)  scale(1.02); }
+  36%  { transform: translateX(-5px) scale(1.01); }
+  48%  { transform: translateX(5px)  scale(1.01); }
+  60%  { transform: translateX(-3px) scale(1);    }
+  72%  { transform: translateX(3px)  scale(1);    }
+  84%  { transform: translateX(-1px) scale(1);    }
+  100% { transform: translateX(0)    scale(1);    }
+}
+@keyframes glow-emerald {
+  0%,100% { box-shadow: 0 0 10px rgba(16,185,129,.35), 0 0 24px rgba(16,185,129,.12); }
+  50%     { box-shadow: 0 0 22px rgba(16,185,129,.6),  0 0 50px rgba(16,185,129,.2);  }
+}
+@keyframes glow-gold {
+  0%,100% { box-shadow: 0 0 10px rgba(251,191,36,.3),  0 0 24px rgba(251,191,36,.1);  }
+  50%     { box-shadow: 0 0 26px rgba(251,191,36,.55), 0 0 52px rgba(251,191,36,.18); }
+}
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0);    }
+  100% { transform: translateX(-50%); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1;   }
+  50%     { opacity: .45;  }
+}
+
+/* ─── Utility animations ────────────────────────────── */
+.anim-shake    { animation: shake-bump   .72s cubic-bezier(.36,.07,.19,.97); }
+.anim-glow-grn { animation: glow-emerald 1.8s ease-in-out 3; }
+.anim-glow-gld { animation: glow-gold    2.2s ease-in-out infinite; }
+.anim-ticker   { animation: ticker-scroll 48s  linear infinite; }
+.anim-fade-up  { animation: fade-up      .3s  ease-out; }
+.anim-pulse    { animation: pulse-dot    1.4s  ease-in-out infinite; }
+
+/* ─── Glassmorphism card ────────────────────────────── */
+.glass {
+  background: rgba(18,19,26,.78);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,.07);
+  transition: border-color .25s, transform .2s, box-shadow .2s;
+}
+.glass:hover {
+  border-color: rgba(255,87,34,.3);
+  transform: translateY(-2px);
+}
+
+/* ─── Category badges ───────────────────────────────── */
+.cat-badge { padding:2px 8px; font-size:10px; font-weight:700; border-radius:20px; font-family:var(--font-mono); letter-spacing:.03em; display:inline-block; }
+.cat-defi    { background:rgba(16,185,129,.1);  color:#10B981; border:1px solid rgba(16,185,129,.25); }
+.cat-nft     { background:rgba(167,139,250,.1); color:#A78BFA; border:1px solid rgba(167,139,250,.25); }
+.cat-airdrop { background:rgba(56,189,248,.1);  color:#38BDF8; border:1px solid rgba(56,189,248,.25); }
+.cat-trading { background:rgba(251,185,36,.1);  color:#FBB924; border:1px solid rgba(251,185,36,.25); }
+.cat-macro   { background:rgba(255,87,34,.1);   color:#FF5722; border:1px solid rgba(255,87,34,.25); }
+.cat-meme    { background:rgba(249,115,22,.1);  color:#F97316; border:1px solid rgba(249,115,22,.25); }
+
+/* ─── Gradient helpers ──────────────────────────────── */
+.g-orange      { background: linear-gradient(135deg,#FF5722,#FF8A00); }
+.g-orange-text { background: linear-gradient(135deg,#FF5722,#FF8A00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+/* ─── Blur lock overlay ─────────────────────────────── */
+.blur-lock {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar       { width:4px; }
+::-webkit-scrollbar-track { background:#060609; }
+::-webkit-scrollbar-thumb { background:rgba(255,87,34,.2); border-radius:4px; }
+
+/* ─── Modal backdrop ────────────────────────────────── */
+.modal-bg { background:rgba(4,4,8,.92); backdrop-filter:blur(16px); }
+
+/* ─── Base reset ────────────────────────────────────── */
+*,*::before,*::after { box-sizing:border-box; }
+body {
+  margin: 0;
+  background: #060609;
+  color: #CBD5E1;
+  font-family: 'Plus Jakarta Sans','Inter',system-ui,sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3,h4,h5 { font-family:'Space Grotesk',system-ui,sans-serif; color:#F1F5F9; }
+#root { min-height:100svh; }

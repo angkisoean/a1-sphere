@@ -28,8 +28,18 @@ interface AlphaPost {
   totalEarned: number; createdAt: number; pdfName?: string
 }
 
+/** Mirrors the SDK's Asset shape returned by sphere_getBalance */
+interface SphereAsset {
+  readonly coinId: string
+  readonly symbol: string
+  readonly name: string
+  readonly decimals: number
+  readonly totalAmount: string
+  readonly confirmedAmount: string
+}
+
 interface SphereClient {
-  query: (method: string) => Promise<unknown>
+  query: (method: string, params?: Record<string, unknown>) => Promise<unknown>
   intent: (action: string, params: Record<string, unknown>) => Promise<unknown>
   disconnect: () => Promise<void>
 }
@@ -41,6 +51,7 @@ interface WalletState {
   balance: number
   sessionId: string
   client: SphereClient | null
+  uctCoinId: string
 }
 
 interface DemoStore {
@@ -64,6 +75,9 @@ const DEMO_KEY      = 'a1sphere_demo'
 const SESSION_KEY   = 'a1sphere_sid'
 const DECIMALS      = 18n
 const BASE_UNIT     = 10n ** DECIMALS
+
+/** UCT coinId on testnet2 — NETWORKS.testnet2.nativeCoinIds[0] */
+const UCT_COIN_ID   = 'f581d30f593e4b369d684a4563b5246f07b1d265f7178a2c0a82b81f39c24dc0'
 
 const DEMO_PROFILES: { nametag: string; balance: number }[] = [
   { nametag: '@satoshi_unicity', balance: 1250 },
@@ -154,6 +168,22 @@ function saveDemo(d: DemoStore): void {
   localStorage.setItem(DEMO_KEY, JSON.stringify(d))
 }
 
+/**
+ * Parse UCT balance from sphere_getBalance response.
+ * The SDK returns Asset[] (array!), not { amount: string }.
+ * Each Asset has { coinId, symbol, totalAmount, decimals, ... }.
+ */
+function parseBalance(raw: unknown): { balance: number; coinId: string } {
+  if (!Array.isArray(raw)) return { balance: 0, coinId: UCT_COIN_ID }
+  const assets = raw as SphereAsset[]
+  /* Try to find UCT by coinId first, then by symbol */
+  const uct = assets.find(a => a.coinId === UCT_COIN_ID)
+           ?? assets.find(a => a.symbol?.toUpperCase() === 'UCT')
+  if (!uct) return { balance: 0, coinId: UCT_COIN_ID }
+  const base = BigInt(uct.totalAmount || '0')
+  return { balance: Number(base / BASE_UNIT), coinId: uct.coinId }
+}
+
 /* ════════════════════════════════════════════════════════════
    APP
    ════════════════════════════════════════════════════════════ */
@@ -162,7 +192,7 @@ export default function App() {
 
   /* ── core state ────────────────────────────── */
   const [w, setW] = useState<WalletState>({
-    status:'disconnected', nametag:'', address:'', balance:0, sessionId:'', client:null,
+    status:'disconnected', nametag:'', address:'', balance:0, sessionId:'', client:null, uctCoinId: UCT_COIN_ID,
   })
   const [alphas, setAlphas]         = useState<AlphaPost[]>(SEED)
   const [ticker, setTicker]         = useState<string[]>(
@@ -207,7 +237,7 @@ export default function App() {
   useEffect(() => {
     const d = loadDemo()
     if (d) {
-      setW({ status:'demo', nametag:d.nametag, address:'DIRECT://demo', balance:d.balance, sessionId:'demo', client:null })
+      setW({ status:'demo', nametag:d.nametag, address:'DIRECT://demo', balance:d.balance, sessionId:'demo', client:null, uctCoinId: UCT_COIN_ID })
       setUnlocked(new Set(d.unlockedIds))
     }
   }, [])
@@ -245,17 +275,20 @@ export default function App() {
         if (cancelled) { void res.disconnect(); return }
         const id = res.connection.identity
         let bal = 0
+        let resolvedCoinId = UCT_COIN_ID
         try {
-          const raw = await res.client.query('sphere_getBalance') as { amount?: string } | null
-          if (raw?.amount) bal = Number(BigInt(raw.amount) / BASE_UNIT)
+          const raw = await res.client.query('sphere_getBalance')
+          const parsed = parseBalance(raw)
+          bal = parsed.balance
+          resolvedCoinId = parsed.coinId
         } catch { /* balance query optional */ }
         sessionStorage.setItem(SESSION_KEY, res.connection.sessionId)
         setW({
           status: 'connected',
           nametag: id.nametag ? `@${id.nametag}` : shortAddr(id.directAddress ?? id.chainPubkey),
           address: id.directAddress ?? id.chainPubkey,
-          balance: bal, sessionId: res.connection.sessionId,
-          client: { query: m => res.client.query(m), intent: (a, p) => res.client.intent(a, p), disconnect: () => res.disconnect() },
+          balance: bal, sessionId: res.connection.sessionId, uctCoinId: resolvedCoinId,
+          client: { query: (m, p) => res.client.query(m, p), intent: (a, p) => res.client.intent(a, p), disconnect: () => res.disconnect() },
         })
       } catch { /* silent reconnect failed — user will click connect manually */ }
     })()
@@ -274,9 +307,12 @@ export default function App() {
       })
       const id = res.connection.identity
       let bal = 0
+      let resolvedCoinId = UCT_COIN_ID
       try {
-        const raw = await res.client.query('sphere_getBalance') as { amount?: string } | null
-        if (raw?.amount) bal = Number(BigInt(raw.amount) / BASE_UNIT)
+        const raw = await res.client.query('sphere_getBalance')
+        const parsed = parseBalance(raw)
+        bal = parsed.balance
+        resolvedCoinId = parsed.coinId
       } catch { /* balance is optional */ }
       sessionStorage.setItem(SESSION_KEY, res.connection.sessionId)
       localStorage.removeItem(DEMO_KEY)
@@ -284,8 +320,8 @@ export default function App() {
         status: 'connected',
         nametag: id.nametag ? `@${id.nametag}` : shortAddr(id.directAddress ?? id.chainPubkey),
         address: id.directAddress ?? id.chainPubkey,
-        balance: bal, sessionId: res.connection.sessionId,
-        client: { query: m => res.client.query(m), intent: (a, p) => res.client.intent(a, p), disconnect: () => res.disconnect() },
+        balance: bal, sessionId: res.connection.sessionId, uctCoinId: resolvedCoinId,
+        client: { query: (m, p) => res.client.query(m, p), intent: (a, p) => res.client.intent(a, p), disconnect: () => res.disconnect() },
       })
       flash(`✅ Connected as ${id.nametag ? '@' + id.nametag : 'wallet'}`)
     } catch {
@@ -296,7 +332,7 @@ export default function App() {
 
   /* ── activate demo ─────────────────────────── */
   const activateDemo = useCallback((p: { nametag: string; balance: number }) => {
-    setW({ status:'demo', nametag:p.nametag, address:'DIRECT://demo_'+uid(), balance:p.balance, sessionId:'demo', client:null })
+    setW({ status:'demo', nametag:p.nametag, address:'DIRECT://demo_'+uid(), balance:p.balance, sessionId:'demo', client:null, uctCoinId: UCT_COIN_ID })
     setDemoModal(false)
     flash(`🧪 Demo: ${p.nametag} (${p.balance} UCT)`)
   }, [flash])
@@ -306,7 +342,7 @@ export default function App() {
     if (w.client) { try { await w.client.disconnect() } catch { /* ignore */ } }
     sessionStorage.removeItem(SESSION_KEY)
     localStorage.removeItem(DEMO_KEY)
-    setW({ status:'disconnected', nametag:'', address:'', balance:0, sessionId:'', client:null })
+    setW({ status:'disconnected', nametag:'', address:'', balance:0, sessionId:'', client:null, uctCoinId: UCT_COIN_ID })
     setUnlocked(new Set())
     flash('Disconnected')
   }, [w.client, flash])
@@ -321,19 +357,29 @@ export default function App() {
     if (w.status === 'connected' && w.client) {
       try {
         await w.client.intent('send', {
-          to: alpha.author.replace(/^@/, ''),
+          to: alpha.author,  /* Keep '@' prefix — SDK parseAddress requires it for nametags */
           amount: String(BigInt(alpha.price) * BASE_UNIT),
-          coinId: '', // resolve from token registry in production
+          coinId: w.uctCoinId,
           memo: `A1 Sphere: "${alpha.title}"`,
         })
+        /* Refresh balance from wallet after successful payment */
+        try {
+          const raw = await w.client.query('sphere_getBalance', { coinId: w.uctCoinId })
+          const parsed = parseBalance(raw)
+          setW(prev => ({ ...prev, balance: parsed.balance }))
+        } catch { /* balance refresh optional — will desync but not crash */ }
       } catch (e: unknown) {
         const code = (e as { code?: number })?.code
         if (code === 4003 || code === 4200) { flash('Payment cancelled', false); return }
         if (code === 4009) { flash('⚠️ Wallet locked', false); return }
+        if (code === 4100) { flash('❌ Insufficient balance in wallet', false); return }
+        if (code === 4101) { flash('❌ Invalid recipient address', false); return }
+        flash('❌ Payment failed', false); return
       }
+    } else {
+      /* Demo mode — just deduct locally */
+      setW(prev => ({ ...prev, balance: prev.balance - alpha.price }))
     }
-
-    setW(prev => ({ ...prev, balance: prev.balance - alpha.price }))
     setAlphas(prev => prev.map(a => a.id === alpha.id ? { ...a, unlocks: a.unlocks + 1, totalEarned: a.totalEarned + alpha.price } : a))
     setUnlocked(prev => new Set(prev).add(alpha.id))
     setTicker(t => [`⚡ ${w.nametag || 'anon'} unlocked "${alpha.title.slice(0,26)}…" — ${alpha.price} UCT`, ...t].slice(0, 50))

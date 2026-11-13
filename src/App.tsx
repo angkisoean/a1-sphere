@@ -73,6 +73,8 @@ const WALLET_URL    = 'https://sphere.unicity.network'
 const NET_TESTNET2  = { id: 4, name: 'testnet2' } as const
 const DEMO_KEY      = 'a1sphere_demo'
 const SESSION_KEY   = 'a1sphere_sid'
+const VOTES_KEY     = 'a1sphere_user_votes'
+const CUSTOM_KEY    = 'a1sphere_custom_alphas'
 const DECIMALS      = 18n
 const BASE_UNIT     = 10n ** DECIMALS
 
@@ -168,6 +170,37 @@ function saveDemo(d: DemoStore): void {
   localStorage.setItem(DEMO_KEY, JSON.stringify(d))
 }
 
+/* User vote persistence */
+function loadUserVotes(): Record<string, 'alpha' | 'rug'> {
+  try {
+    const raw = localStorage.getItem(VOTES_KEY)
+    return raw ? JSON.parse(raw) as Record<string, 'alpha' | 'rug'> : {}
+  } catch {
+    return {}
+  }
+}
+function saveUserVotes(v: Record<string, 'alpha' | 'rug'>): void {
+  try {
+    localStorage.setItem(VOTES_KEY, JSON.stringify(v))
+  } catch { /* ignore */ }
+}
+
+/* Published alphas persistence */
+function loadCustomAlphas(): AlphaPost[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY)
+    return raw ? JSON.parse(raw) as AlphaPost[] : []
+  } catch {
+    return []
+  }
+}
+function saveCustomAlphas(list: AlphaPost[]): void {
+  try {
+    const custom = list.filter(a => !SEED.some(s => s.id === a.id))
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom))
+  } catch { /* ignore */ }
+}
+
 /**
  * Parse UCT balance from sphere_getBalance response.
  * The SDK returns Asset[] (array!), not { amount: string }.
@@ -194,7 +227,8 @@ export default function App() {
   const [w, setW] = useState<WalletState>({
     status:'disconnected', nametag:'', address:'', balance:0, sessionId:'', client:null, uctCoinId: UCT_COIN_ID,
   })
-  const [alphas, setAlphas]         = useState<AlphaPost[]>(SEED)
+  const [alphas, setAlphas]         = useState<AlphaPost[]>(() => [...loadCustomAlphas(), ...SEED])
+  const [userVotes, setUserVotes]   = useState<Record<string, 'alpha' | 'rug'>>(loadUserVotes)
   const [ticker, setTicker]         = useState<string[]>(
     ['🔥 @whale99 unlocked "Whale BTC Q4" — 25 UCT','⚡ @degen_ser unlocked "Meme Coin Stealth" — 5 UCT','🚀 @alpha_sniper unlocked "DeFi Yield 200%" — 10 UCT','💎 @moon_chaser unlocked "Airdrop Monad" — 15 UCT','👑 @diamond_paws voted ALPHA 🔥 on "Fed Pivot"'],
   )
@@ -214,6 +248,7 @@ export default function App() {
   const [uBody, setUBody]       = useState('')
   const [uPrice, setUPrice]     = useState(10)
   const [uPdf, setUPdf]         = useState('')
+  const pdfInputRef             = useRef<HTMLInputElement>(null)
 
   const toastRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const connected = w.status === 'connected' || w.status === 'demo'
@@ -397,27 +432,124 @@ export default function App() {
     bump(a.id); flash(`⚡ ${u} bought alpha!`)
   }, [alphas, bump, flash])
 
-  /* ── vote ───────────────────────────────────── */
+  /* ── vote (mutually exclusive with undo/toggle) ── */
   const doVote = useCallback((id: string, kind: 'alpha' | 'rug') => {
-    setAlphas(prev => prev.map(a => a.id === id ? { ...a, alphaVotes: a.alphaVotes + (kind === 'alpha' ? 1 : 0), rugVotes: a.rugVotes + (kind === 'rug' ? 1 : 0) } : a))
-    if (readAlpha?.id === id) setReadAlpha(r => r ? { ...r, alphaVotes: r.alphaVotes + (kind === 'alpha' ? 1 : 0), rugVotes: r.rugVotes + (kind === 'rug' ? 1 : 0) } : r)
-    flash(kind === 'alpha' ? '🔥 Voted ALPHA!' : '💩 Voted RUG!')
-  }, [readAlpha, flash])
+    const currentVote = userVotes[id]
+
+    if (currentVote === kind) {
+      /* UNDO / BATALKAN VOTE: user menekan tombol yang sama lagi */
+      setUserVotes(prev => {
+        const next = { ...prev }
+        delete next[id]
+        saveUserVotes(next)
+        return next
+      })
+
+      setAlphas(prev => {
+        const next = prev.map(a => {
+          if (a.id !== id) return a
+          return {
+            ...a,
+            alphaVotes: kind === 'alpha' ? Math.max(0, a.alphaVotes - 1) : a.alphaVotes,
+            rugVotes: kind === 'rug' ? Math.max(0, a.rugVotes - 1) : a.rugVotes,
+          }
+        })
+        saveCustomAlphas(next)
+        return next
+      })
+
+      if (readAlpha?.id === id) {
+        setReadAlpha(r => r ? {
+          ...r,
+          alphaVotes: kind === 'alpha' ? Math.max(0, r.alphaVotes - 1) : r.alphaVotes,
+          rugVotes: kind === 'rug' ? Math.max(0, r.rugVotes - 1) : r.rugVotes,
+        } : r)
+      }
+
+      flash(kind === 'alpha' ? '↩️ Vote ALPHA dibatalkan' : '↩️ Vote RUG dibatalkan')
+    } else if (currentVote) {
+      /* GANTI PILIHAN: user berpindah dari pilihan sebelumnya */
+      setUserVotes(prev => {
+        const next = { ...prev, [id]: kind }
+        saveUserVotes(next)
+        return next
+      })
+
+      setAlphas(prev => {
+        const next = prev.map(a => {
+          if (a.id !== id) return a
+          return {
+            ...a,
+            alphaVotes: kind === 'alpha' ? a.alphaVotes + 1 : Math.max(0, a.alphaVotes - 1),
+            rugVotes: kind === 'rug' ? a.rugVotes + 1 : Math.max(0, a.rugVotes - 1),
+          }
+        })
+        saveCustomAlphas(next)
+        return next
+      })
+
+      if (readAlpha?.id === id) {
+        setReadAlpha(r => r ? {
+          ...r,
+          alphaVotes: kind === 'alpha' ? r.alphaVotes + 1 : Math.max(0, r.alphaVotes - 1),
+          rugVotes: kind === 'rug' ? r.rugVotes + 1 : Math.max(0, r.rugVotes - 1),
+        } : r)
+      }
+
+      flash(kind === 'alpha' ? '🔥 Ganti pilihan: Voted ALPHA!' : '💩 Ganti pilihan: Voted RUG!')
+    } else {
+      /* VOTE PERTAMA KALI */
+      setUserVotes(prev => {
+        const next = { ...prev, [id]: kind }
+        saveUserVotes(next)
+        return next
+      })
+
+      setAlphas(prev => {
+        const next = prev.map(a => {
+          if (a.id !== id) return a
+          return {
+            ...a,
+            alphaVotes: kind === 'alpha' ? a.alphaVotes + 1 : a.alphaVotes,
+            rugVotes: kind === 'rug' ? a.rugVotes + 1 : a.rugVotes,
+          }
+        })
+        saveCustomAlphas(next)
+        return next
+      })
+
+      if (readAlpha?.id === id) {
+        setReadAlpha(r => r ? {
+          ...r,
+          alphaVotes: kind === 'alpha' ? r.alphaVotes + 1 : r.alphaVotes,
+          rugVotes: kind === 'rug' ? r.rugVotes + 1 : r.rugVotes,
+        } : r)
+      }
+
+      flash(kind === 'alpha' ? '🔥 Voted ALPHA!' : '💩 Voted RUG!')
+    }
+  }, [userVotes, readAlpha, flash])
 
   /* ── publish ───────────────────────────────── */
   const doPublish = useCallback(() => {
-    if (!uTitle.trim() || !uTeaser.trim() || !uBody.trim()) { flash('⚠️ Fill required fields', false); return }
+    if (!uTitle.trim() || !uTeaser.trim() || !uBody.trim()) { flash('⚠️ Isi semua bidang wajib', false); return }
+    if (uPrice < 1 || isNaN(uPrice)) { flash('⚠️ Harga minimal 1 UCT', false); return }
     const a: AlphaPost = {
       id: uid(), title: uTitle.trim(), author: w.nametag || shortAddr(w.address),
-      category: uCat, price: uPrice, teaser: uTeaser.trim(), fullContent: uBody.trim(),
+      category: uCat, price: Math.max(1, Math.round(uPrice)), teaser: uTeaser.trim(), fullContent: uBody.trim(),
       unlocks: 0, alphaVotes: 0, rugVotes: 0, totalEarned: 0, createdAt: Date.now(),
-      pdfName: uPdf || undefined,
+      pdfName: uPdf.trim() || undefined,
     }
-    setAlphas(prev => [a, ...prev])
+    setAlphas(prev => {
+      const next = [a, ...prev]
+      saveCustomAlphas(next)
+      return next
+    })
     bump(a.id)
     setTicker(t => [`📝 ${a.author} posted "${a.title.slice(0,28)}…"`, ...t].slice(0, 50))
     setUTitle(''); setUTeaser(''); setUBody(''); setUPrice(10); setUPdf('')
-    setTab('feed'); flash('✅ Alpha published!')
+    if (pdfInputRef.current) pdfInputRef.current.value = ''
+    setTab('feed'); flash('✅ Alpha berhasil dipublikasikan!')
   }, [uTitle, uTeaser, uBody, uCat, uPrice, uPdf, w.nametag, w.address, bump, flash])
 
   /* ── derived ───────────────────────────────── */
@@ -542,7 +674,21 @@ export default function App() {
                   <TrendingUp className="w-4 h-4" /> Recently Unlocked
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {bumpQ.slice(0, 3).map(id => { const a = alphas.find(x => x.id === id); return a ? <Card key={a.id} a={a} shaking={shakingId === a.id} glowing={glowId === a.id} open={unlocked.has(a.id)} onUnlock={doUnlock} onVote={doVote} /> : null })}
+                  {bumpQ.slice(0, 3).map(id => {
+                    const a = alphas.find(x => x.id === id)
+                    return a ? (
+                      <Card
+                        key={a.id}
+                        a={a}
+                        shaking={shakingId === a.id}
+                        glowing={glowId === a.id}
+                        open={unlocked.has(a.id)}
+                        onUnlock={doUnlock}
+                        onVote={doVote}
+                        userVote={userVotes[a.id]}
+                      />
+                    ) : null
+                  })}
                 </div>
               </section>
             )}
@@ -554,7 +700,16 @@ export default function App() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sorted.filter(a => !bumpQ.slice(0, 3).includes(a.id)).map(a => (
-                  <Card key={a.id} a={a} shaking={shakingId === a.id} glowing={glowId === a.id} open={unlocked.has(a.id)} onUnlock={doUnlock} onVote={doVote} />
+                  <Card
+                    key={a.id}
+                    a={a}
+                    shaking={shakingId === a.id}
+                    glowing={glowId === a.id}
+                    open={unlocked.has(a.id)}
+                    onUnlock={doUnlock}
+                    onVote={doVote}
+                    userVote={userVotes[a.id]}
+                  />
                 ))}
               </div>
             </section>
@@ -575,7 +730,69 @@ export default function App() {
               </div>
               <Fld label="Free Teaser * — shown publicly"><textarea value={uTeaser} onChange={e => setUTeaser(e.target.value)} rows={3} placeholder="Hook that makes readers want to pay…" className="w-full px-3 py-2 text-sm text-white rounded-xl focus:outline-none resize-y" style={{ background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.1)' }} /></Fld>
               <Fld label="Full Content * — visible after payment"><textarea value={uBody} onChange={e => setUBody(e.target.value)} rows={9} placeholder="Full alpha analysis…" className="w-full px-3 py-2 text-sm text-white rounded-xl focus:outline-none resize-y" style={{ background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.1)' }} /></Fld>
-              <Fld label="Attach PDF (optional)"><label className="flex items-center gap-2 cursor-pointer text-sm hover:text-white transition-colors" style={{ color: 'rgba(148,163,184,.6)' }}><FileText className="w-4 h-4" />{uPdf || 'Choose PDF file…'}<input type="file" accept=".pdf" className="hidden" onChange={e => setUPdf(e.target.files?.[0]?.name ?? '')} /></label></Fld>
+              
+              {/* PDF upload with Cancel / Remove capability */}
+              <Fld label="Attach PDF (optional)">
+                {!uPdf ? (
+                  <label className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-dashed border-white/10 hover:border-[#FF5722]/50 hover:bg-white/[0.02] cursor-pointer text-sm text-slate-400 hover:text-white transition-all">
+                    <FileText className="w-4 h-4 text-[#FF5722]" />
+                    <span>Pilih file PDF riset/dokumen kamu...</span>
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) setUPdf(file.name)
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-sky-500/30">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-4 h-4 text-[#38BDF8] flex-shrink-0" />
+                      <span className="text-sm font-medium text-slate-200 truncate">{uPdf}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/10 text-[#38BDF8] border border-sky-500/20 flex-shrink-0">
+                        PDF Terlampir
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => pdfInputRef.current?.click()}
+                        className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 transition-colors cursor-pointer"
+                        title="Pilih file PDF lain"
+                      >
+                        Ganti
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUPdf('')
+                          if (pdfInputRef.current) pdfInputRef.current.value = ''
+                          flash('📎 Lampiran PDF dibatalkan')
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-colors cursor-pointer"
+                        title="Batalkan / Hapus lampiran PDF"
+                      >
+                        <X className="w-3.5 h-3.5" /> Batal
+                      </button>
+                    </div>
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) setUPdf(file.name)
+                      }}
+                    />
+                  </div>
+                )}
+              </Fld>
+
               <button onClick={doPublish} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white cursor-pointer transition-all" style={{ background: 'linear-gradient(135deg,#FF5722,#FF8A00)', boxShadow: '0 4px 20px rgba(255,87,34,.25)' }}>
                 <Plus className="w-4 h-4" /> Publish Alpha
               </button>
@@ -611,10 +828,27 @@ export default function App() {
                 <Stat icon={<FileText className="w-5 h-5" />} label="Published" val={String(myAlphas.length)} color="#FF5722" />
                 <Stat icon={<Eye className="w-5 h-5" />} label="Unlocks" val={String(myReads)} color="#38BDF8" />
                 <Stat icon={<DollarSign className="w-5 h-5" />} label="Earned" val={fmtUCT(myEarned)} color="#FBB924" />
-                <Stat icon={<Flame className="w-5 h-5" />} label="Rating" val={myAlphas.length ? `${Math.round(myAlphas.reduce((s, a) => s + (a.alphaVotes / Math.max(a.alphaVotes + a.rugVotes, 1)) * 100, 0) / myAlphas.length)}%` : '—'} color="#10B981" />
+                <Stat
+                  icon={<Flame className="w-5 h-5" />}
+                  label="Alpha Rating"
+                  val={(() => {
+                    const totalAlpha = myAlphas.reduce((s, a) => s + a.alphaVotes, 0)
+                    const totalRug   = myAlphas.reduce((s, a) => s + a.rugVotes, 0)
+                    const totalVotes = totalAlpha + totalRug
+                    return totalVotes > 0 ? `${Math.round((totalAlpha / totalVotes) * 100)}%` : '—'
+                  })()}
+                  color="#10B981"
+                />
               </div>
             </div>
-            <h3 className="text-xs font-bold mb-3 flex items-center gap-2" style={{ color: 'rgba(148,163,184,.6)' }}><BookOpen className="w-3.5 h-3.5" /> My Published Alphas</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: 'rgba(148,163,184,.6)' }}>
+                <BookOpen className="w-3.5 h-3.5" /> My Published Alphas
+              </h3>
+              <span className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-white/[0.02] px-2.5 py-1 rounded-full border border-white/[0.05]">
+                <Shield className="w-3 h-3 text-[#FF5722]" /> Read-Only (Published & Immutable)
+              </span>
+            </div>
             {myAlphas.length === 0 ? (
               <div className="rounded-2xl p-10 text-center" style={{ background: 'rgba(12,13,20,.5)', border: '1px dashed rgba(255,255,255,.07)' }}>
                 <Upload className="w-8 h-8 mx-auto mb-3 opacity-25" /><p className="text-sm" style={{ color: 'rgba(148,163,184,.45)' }}>No alpha published yet.</p>
@@ -622,7 +856,7 @@ export default function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {myAlphas.map(a => <Card key={a.id} a={a} shaking={false} glowing={false} open onUnlock={() => setReadAlpha(a)} onVote={doVote} owner />)}
+                {myAlphas.map(a => <Card key={a.id} a={a} shaking={false} glowing={false} open onUnlock={() => setReadAlpha(a)} onVote={doVote} owner userVote={userVotes[a.id]} />)}
               </div>
             )}
           </div>
@@ -630,7 +864,16 @@ export default function App() {
       </main>
 
       {/* ════ READING MODAL ═══════════════════════ */}
-      {readAlpha && <ReadModal alpha={readAlpha} isOpen={unlocked.has(readAlpha.id) || myAlphas.some(x => x.id === readAlpha.id)} onClose={() => setReadAlpha(null)} onUnlock={doUnlock} onVote={doVote} />}
+      {readAlpha && (
+        <ReadModal
+          alpha={alphas.find(a => a.id === readAlpha.id) ?? readAlpha}
+          isOpen={unlocked.has(readAlpha.id) || myAlphas.some(x => x.id === readAlpha.id)}
+          onClose={() => setReadAlpha(null)}
+          onUnlock={doUnlock}
+          onVote={doVote}
+          userVote={userVotes[readAlpha.id]}
+        />
+      )}
 
       {/* ════ DEMO SELECTOR MODAL ═════════════════ */}
       {demoModal && (
@@ -677,12 +920,15 @@ export default function App() {
    ════════════════════════════════════════════════════════════ */
 
 /* ── Alpha Card ──────────────────────────────── */
-function Card({ a, shaking, glowing, open, onUnlock, onVote, owner }: {
+function Card({ a, shaking, glowing, open, onUnlock, onVote, owner, userVote }: {
   a: AlphaPost; shaking: boolean; glowing: boolean; open: boolean
   onUnlock: (a: AlphaPost) => void; onVote: (id: string, k: 'alpha' | 'rug') => void; owner?: boolean
+  userVote?: 'alpha' | 'rug'
 }) {
-  const total = a.alphaVotes + a.rugVotes
-  const pct   = total ? Math.round(a.alphaVotes / total * 100) : 50
+  const total    = a.alphaVotes + a.rugVotes
+  const alphaPct = total ? Math.round((a.alphaVotes / total) * 100) : 0
+  const rugPct   = total ? 100 - alphaPct : 0
+
   return (
     <div className={`glass rounded-2xl overflow-hidden flex flex-col ${shaking ? 'anim-shake' : ''} ${glowing ? 'anim-glow-grn' : ''}`} style={glowing ? { borderColor: 'rgba(16,185,129,.4)' } : undefined}>
       <div className="p-4 pb-3">
@@ -700,33 +946,77 @@ function Card({ a, shaking, glowing, open, onUnlock, onVote, owner }: {
       <div className="px-4 pb-2 flex items-center gap-3 text-[10px]" style={{ color: 'rgba(148,163,184,.45)' }}>
         <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{a.unlocks}</span>
         <span className="flex items-center gap-0.5" style={{ fontFamily: 'JetBrains Mono,monospace' }}><DollarSign className="w-3 h-3" />{a.totalEarned}</span>
-        <span className="flex items-center gap-0.5 ml-auto" style={{ color: '#10B981' }}><Flame className="w-3 h-3" />{pct}%</span>
-        <span className="flex items-center gap-0.5" style={{ color: '#FF5722' }}><ThumbsDown className="w-3 h-3" />{100 - pct}%</span>
+        <span className="flex items-center gap-1 ml-auto font-mono text-[11px]" style={{ color: total ? '#10B981' : 'rgba(148,163,184,.4)' }}>
+          <Flame className="w-3 h-3" />{total ? `${alphaPct}%` : '0%'}
+        </span>
+        <span className="flex items-center gap-1 font-mono text-[11px]" style={{ color: total ? '#FF5722' : 'rgba(148,163,184,.4)' }}>
+          <ThumbsDown className="w-3 h-3" />{total ? `${rugPct}%` : '0%'}
+        </span>
       </div>
-      <div className="mx-4 mb-3 h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,.06)' }}>
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: 'linear-gradient(to right,#10B981,rgba(16,185,129,.4))' }} />
+      <div className="mx-4 mb-3 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,.06)' }}>
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: total ? `${alphaPct}%` : '0%',
+            background: 'linear-gradient(to right,#10B981,rgba(16,185,129,.4))',
+          }}
+        />
       </div>
       <div className="p-4 pt-2 flex gap-2">
         {owner ? (
-          <button onClick={() => onUnlock(a)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all" style={{ background: 'rgba(255,87,34,.08)', color: '#FF5722', border: '1px solid rgba(255,87,34,.2)' }}><BarChart3 className="w-3.5 h-3.5" /> View</button>
+          <button
+            onClick={() => onUnlock(a)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
+            style={{ background: 'rgba(255,87,34,.08)', color: '#FF5722', border: '1px solid rgba(255,87,34,.2)' }}
+            title="Read-only: Preview dokumen kamu"
+          >
+            <Eye className="w-3.5 h-3.5" /> View Alpha (Read-Only)
+          </button>
         ) : open ? (
           <button onClick={() => onUnlock(a)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all" style={{ background: 'rgba(16,185,129,.08)', color: '#10B981', border: '1px solid rgba(16,185,129,.2)' }}><BookOpen className="w-3.5 h-3.5" /> Read</button>
         ) : (
           <button onClick={() => onUnlock(a)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white cursor-pointer transition-all" style={{ background: 'linear-gradient(135deg,#FF5722,#FF8A00)', boxShadow: '0 2px 12px rgba(255,87,34,.2)' }}><Lock className="w-3.5 h-3.5" /> Unlock — {a.price} UCT</button>
         )}
-        {!owner && <>
-          <button onClick={() => onVote(a.id, 'alpha')} title="Alpha 🔥" className="px-2.5 py-2 rounded-xl cursor-pointer transition-all" style={{ background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)', color: '#10B981' }}><Flame className="w-3.5 h-3.5" /></button>
-          <button onClick={() => onVote(a.id, 'rug')} title="Rug 💩" className="px-2.5 py-2 rounded-xl cursor-pointer transition-all" style={{ background: 'rgba(255,87,34,.06)', border: '1px solid rgba(255,87,34,.15)', color: '#FF5722' }}><ThumbsDown className="w-3.5 h-3.5" /></button>
-        </>}
+        {!owner && (
+          <>
+            <button
+              type="button"
+              onClick={() => onVote(a.id, 'alpha')}
+              title={userVote === 'alpha' ? 'Batalkan vote Alpha (Undo)' : 'Vote Alpha 🔥'}
+              className="px-2.5 py-2 rounded-xl cursor-pointer transition-all flex items-center justify-center"
+              style={
+                userVote === 'alpha'
+                  ? { background: 'rgba(16,185,129,.25)', border: '1px solid #10B981', color: '#10B981', boxShadow: '0 0 12px rgba(16,185,129,.4)' }
+                  : { background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)', color: '#10B981' }
+              }
+            >
+              <Flame className={`w-3.5 h-3.5 ${userVote === 'alpha' ? 'fill-[#10B981]' : ''}`} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onVote(a.id, 'rug')}
+              title={userVote === 'rug' ? 'Batalkan vote Rug (Undo)' : 'Vote Rug 💩'}
+              className="px-2.5 py-2 rounded-xl cursor-pointer transition-all flex items-center justify-center"
+              style={
+                userVote === 'rug'
+                  ? { background: 'rgba(255,87,34,.25)', border: '1px solid #FF5722', color: '#FF5722', boxShadow: '0 0 12px rgba(255,87,34,.4)' }
+                  : { background: 'rgba(255,87,34,.06)', border: '1px solid rgba(255,87,34,.15)', color: '#FF5722' }
+              }
+            >
+              <ThumbsDown className={`w-3.5 h-3.5 ${userVote === 'rug' ? 'fill-[#FF5722]' : ''}`} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
 /* ── Reading Modal ───────────────────────────── */
-function ReadModal({ alpha, isOpen, onClose, onUnlock, onVote }: {
+function ReadModal({ alpha, isOpen, onClose, onUnlock, onVote, userVote }: {
   alpha: AlphaPost; isOpen: boolean; onClose: () => void
   onUnlock: (a: AlphaPost) => void; onVote: (id: string, k: 'alpha' | 'rug') => void
+  userVote?: 'alpha' | 'rug'
 }) {
   return (
     <div className="fixed inset-0 z-50 modal-bg flex items-start justify-center overflow-y-auto p-4 pt-12" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -759,10 +1049,43 @@ function ReadModal({ alpha, isOpen, onClose, onUnlock, onVote }: {
                 })}
               </div>
               <div className="mt-6 pt-5 border-t" style={{ borderColor: 'rgba(255,255,255,.06)' }}>
-                <p className="text-xs mb-3" style={{ color: 'rgba(148,163,184,.45)' }}>Rate this alpha:</p>
-                <div className="flex gap-3">
-                  <button onClick={() => onVote(alpha.id, 'alpha')} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm cursor-pointer transition-all" style={{ background: 'rgba(16,185,129,.08)', color: '#10B981', border: '1px solid rgba(16,185,129,.25)' }}><Flame className="w-4 h-4" /> Alpha 🔥 <span className="text-xs opacity-60">({alpha.alphaVotes})</span></button>
-                  <button onClick={() => onVote(alpha.id, 'rug')} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm cursor-pointer transition-all" style={{ background: 'rgba(255,87,34,.08)', color: '#FF5722', border: '1px solid rgba(255,87,34,.25)' }}><ThumbsDown className="w-4 h-4" /> Rug 💩 <span className="text-xs opacity-60">({alpha.rugVotes})</span></button>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold" style={{ color: 'rgba(148,163,184,.6)' }}>Rate this alpha:</p>
+                  {userVote && (
+                    <span className="text-[11px] text-slate-400">
+                      💡 Pencet tombol yang sama lagi untuk membatalkan (undo)
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onVote(alpha.id, 'alpha')}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all"
+                    style={
+                      userVote === 'alpha'
+                        ? { background: 'rgba(16,185,129,.22)', color: '#10B981', border: '1px solid #10B981', boxShadow: '0 0 14px rgba(16,185,129,.4)' }
+                        : { background: 'rgba(16,185,129,.08)', color: '#10B981', border: '1px solid rgba(16,185,129,.25)' }
+                    }
+                  >
+                    <Flame className={`w-4 h-4 ${userVote === 'alpha' ? 'fill-[#10B981]' : ''}`} />
+                    {userVote === 'alpha' ? 'Voted ALPHA 🔥' : 'Alpha 🔥'}
+                    <span className="text-xs opacity-75 font-mono">({alpha.alphaVotes})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onVote(alpha.id, 'rug')}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all"
+                    style={
+                      userVote === 'rug'
+                        ? { background: 'rgba(255,87,34,.22)', color: '#FF5722', border: '1px solid #FF5722', boxShadow: '0 0 14px rgba(255,87,34,.4)' }
+                        : { background: 'rgba(255,87,34,.08)', color: '#FF5722', border: '1px solid rgba(255,87,34,.25)' }
+                    }
+                  >
+                    <ThumbsDown className={`w-4 h-4 ${userVote === 'rug' ? 'fill-[#FF5722]' : ''}`} />
+                    {userVote === 'rug' ? 'Voted RUG 💩' : 'Rug 💩'}
+                    <span className="text-xs opacity-75 font-mono">({alpha.rugVotes})</span>
+                  </button>
                 </div>
               </div>
             </>

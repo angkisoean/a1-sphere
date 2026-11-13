@@ -301,7 +301,7 @@ export default function App() {
     if (!sid) return
     ;(async () => {
       try {
-        const { autoConnect } = await import('@unicitylabs/sphere-sdk/impl/browser/connect')
+        const { autoConnect } = await import('@unicitylabs/sphere-sdk/connect/browser')
         const res = await autoConnect({
           dapp: { name: 'A1 Sphere', url: location.origin },
           walletUrl: WALLET_URL, network: NET_TESTNET2,
@@ -335,7 +335,7 @@ export default function App() {
     if (w.status === 'connecting') return
     setW(prev => ({ ...prev, status: 'connecting' }))
     try {
-      const { autoConnect } = await import('@unicitylabs/sphere-sdk/impl/browser/connect')
+      const { autoConnect } = await import('@unicitylabs/sphere-sdk/connect/browser')
       const res = await autoConnect({
         dapp: { name: 'A1 Sphere', url: location.origin, description: 'Pay-to-Read Alpha Market on Unicity' },
         walletUrl: WALLET_URL, network: NET_TESTNET2, timeout: 30000,

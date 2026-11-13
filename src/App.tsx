@@ -11,7 +11,7 @@ import {
   Zap, Crown, Eye, Lock, Unlock, Upload, FileText, Flame,
   Wallet, Plus, BarChart3, BookOpen, DollarSign, ThumbsDown,
   Sparkles, TrendingUp, X, Tag, Check, AlertCircle, ChevronRight,
-  Activity, Shield,
+  Activity, Shield, History, ArrowUpRight, ArrowDownLeft, Clock,
 } from 'lucide-react'
 
 /* ════════════════════════════════════════════════════════════
@@ -19,13 +19,24 @@ import {
    ════════════════════════════════════════════════════════════ */
 
 type Category  = 'DeFi' | 'NFT' | 'Airdrop' | 'Trading' | 'Macro' | 'Meme'
-type Tab       = 'feed' | 'publish' | 'dashboard'
+type Tab       = 'feed' | 'library' | 'publish' | 'dashboard'
 
 interface AlphaPost {
   id: string; title: string; author: string; category: Category
   price: number; teaser: string; fullContent: string
   unlocks: number; alphaVotes: number; rugVotes: number
   totalEarned: number; createdAt: number; pdfName?: string
+}
+
+interface TxRecord {
+  id: string
+  type: 'unlock' | 'earn' | 'publish'
+  title: string
+  amount: number
+  counterparty: string
+  timestamp: number
+  txHash: string
+  status: 'confirmed'
 }
 
 /** Mirrors the SDK's Asset shape returned by sphere_getBalance */
@@ -75,6 +86,8 @@ const DEMO_KEY      = 'a1sphere_demo'
 const SESSION_KEY   = 'a1sphere_sid'
 const VOTES_KEY     = 'a1sphere_user_votes'
 const CUSTOM_KEY    = 'a1sphere_custom_alphas'
+const UNLOCKED_KEY  = 'a1sphere_unlocked'
+const TX_KEY        = 'a1sphere_tx_history'
 const DECIMALS      = 18n
 const BASE_UNIT     = 10n ** DECIMALS
 
@@ -94,45 +107,45 @@ const FAKE_READERS = [
 /* ── Seed alpha posts ───────────────────────────────── */
 const SEED: AlphaPost[] = [
   {
-    id:'a1', title:'Cara Farm Airdrop Monad Testnet — Full Guide',
+    id:'a1', title:'Monad Testnet Airdrop Strategy — Comprehensive Playbook',
     author:'@alpha_hunter', category:'Airdrop', price:15,
-    teaser:'Monad adalah L1 baru dengan funding $225M dari Paradigm. Testnet resmi sudah live — ini kesempatan emas farming airdrop. Langkah pertama kamu perlu setup wallet dan menambahkan network custom…',
-    fullContent:`## Overview\nMonad L1 — $225M funding, EVM-compatible, 10.000 TPS.\n\n## Step 1: Setup Wallet\nTambahkan Monad Testnet ke MetaMask:\n• RPC: https://testnet-rpc.monad.xyz\n• Chain ID: 10143\n\n## Step 2: Claim Faucet\nfaucet.monad.xyz → claim 0.5 MON/hari.\n\n## Step 3: Interaksi Wajib (30 hari+)\n1. MonadSwap — 10 swap/bulan\n2. MonadBridge — bridge dari Sepolia 1x/minggu\n3. MonadLend — supply & borrow\n4. MonadNFT — mint 1 NFT/minggu\n\n## Tips Pro\n• 3–5 wallet berbeda, JANGAN sybil tools\n• Konsistensi harian > volume besar\n• Screenshot semua aktivitas\n\n## Estimasi Reward\n$500–$5.000 / wallet. Timeline Q1 2027. Confidence 85%.`,
+    teaser:'Monad is a high-performance EVM L1 backed by $225M from Paradigm. The public testnet is live — this is the golden window to establish on-chain history before the snapshot…',
+    fullContent:`## Overview\nMonad L1 — $225M institutional funding, 10,000 TPS, 1-second finality with full EVM compatibility.\n\n## Step 1: Wallet & Network Setup\nAdd Monad Testnet to your wallet:\n• RPC Endpoint: https://testnet-rpc.monad.xyz\n• Chain ID: 10143\n• Currency Symbol: MON\n\n## Step 2: Faucet Claim Sequence\nVisit faucet.monad.xyz to claim 0.5 MON daily. Join official Discord for verified role credentials.\n\n## Step 3: Mandatory Protocol Interactions (Weekly Cadence)\n1. MonadSwap — Execute 10+ swaps per month across diverse liquidity pools\n2. MonadBridge — Bridge assets from Sepolia once weekly\n3. MonadLend — Supply collateral and borrow stablecoins with safe LTV (<65%)\n4. MonadNFT — Mint weekly ecosystem commemorative badge\n\n## Sybil Prevention & Pro Tips\n• Use 3–5 distinct wallets with natural interaction intervals\n• Never fund multiple testnet wallets from the same exchange address\n• Maintain multi-month consistency rather than one-day burst volume\n\n## Expected Allocation & Timeline\nEstimated reward range: $1,200 – $6,500 per qualified wallet. Target TGE: Q1 2027. Confidence: 88%.`,
     unlocks:142, alphaVotes:89, rugVotes:12, totalEarned:2130, createdAt:Date.now()-172800000,
   },
   {
-    id:'a2', title:'Whale On-Chain Accumulation BTC — Q4 Analysis',
+    id:'a2', title:'Whale On-Chain Accumulation BTC — Q4 Macro Thesis',
     author:'@onchain_wizard', category:'Trading', price:25,
-    teaser:'Data on-chain menunjukkan accumulation masif oleh whale besar di range $58K–$62K dalam 14 hari terakhir. Pattern ini identik dengan setup pre-rally Q1 2024…',
-    fullContent:`## Whale Addresses\n1. 0x3f5CE… — 2.400 BTC dalam 7 hari\n2. 0x8aC12… — 1.800 BTC keluar exchange\n3. 0xD4e9F… — 5.200 BTC sejak September\n\n## Indikator\n• Exchange Reserve: turun 12% MoM\n• MVRV Z-Score: 1.2 — undervalued\n• Realized vs Market Cap: gap menyempit\n\n## Price Targets\n$78K → $95K → $120K (jika Fed pivot)\n\n## Action Plan\n• DCA $58K–$65K\n• Stop-loss: $52K\n• TP: 25% di $78K, 25% di $90K, hold sisanya`,
+    teaser:'On-chain order flow indicates aggressive accumulation by tier-1 institutional entities between $58K–$62K over the last 14 days. This structural pattern mirrors the pre-expansion breakout of early 2024…',
+    fullContent:`## Tracked Whale Cohorts\n1. 0x3f5CE… — Accumulated 2,400 BTC across 7 trading sessions\n2. 0x8aC12… — 1,800 BTC net outflow from centralized exchanges\n3. 0xD4e9F… — Institutional custody wallet holding 5,200+ BTC without selling\n\n## Key Quantitative Indicators\n• Exchange Reserve Ratio: Down 12.4% MoM (Supply shock setup)\n• MVRV Z-Score: 1.25 — Deeply undervalued historical accumulation band\n• Long-Term Holder SOPR: Reset to neutral baseline\n\n## Macro Catalyst Confluence\nFederal Reserve rate-cutting cycle + global liquidity index expanding + post-halving structural supply contraction.\n\n## Target Trajectories\n• Tier 1: $78,000 (Initial liquidity grab)\n• Tier 2: $95,000 (Psychological resistance)\n• Cycle Target: $125,000+ upon sustained institutional ETF inflows\n\n## Risk Management\nInvalidation close below weekly 200 EMA ($51,800). Take partial 25% profits at Tier 1, hold runner core with trailing stop.`,
     unlocks:98, alphaVotes:72, rugVotes:8, totalEarned:2450, createdAt:Date.now()-86400000,
   },
   {
-    id:'a3', title:'DeFi Yield 200% APY — Strategi Degen Solana',
+    id:'a3', title:'DeFi 200% APY Yield Engine — Concentrated Solana Strategy',
     author:'@defi_maxi', category:'DeFi', price:10,
-    teaser:'Strategy baru di Solana memberikan yield 200%+ APY: recursive lending Kamino + concentrated LP Orca Whirlpools. Banyak yang belum tahu kombinasi ini…',
-    fullContent:`## Strategy: Kamino × Orca Multiply\n\n### Step 1\nDeposit SOL di Kamino → kSOL (8% APY base)\n\n### Step 2\n• Borrow USDC (LTV 75%)\n• 50% swap ke SOL\n• LP di Orca SOL/USDC (±5%)\n• Stake LP di Kamino Multiply\n\n### Yield\n| Source | APY |\n|---|---|\n| Kamino lending | 8% |\n| Orca LP | 45% |\n| 3x leverage | +90% |\n| KMNO rewards | ~40% |\n| **Total** | **~200%** |\n\n### Risk ⚠️\n• IL jika SOL drop >15%\n• Liquidation jika LTV >85%\n• Rebalance setiap 48 jam`,
+    teaser:'A high-efficiency yield loop on Solana yielding 200%+ net APY by stacking recursive lending with concentrated liquidity pools. Here is the exact step-by-step risk parameter model…',
+    fullContent:`## Strategy Overview: Kamino Finance × Orca Whirlpools\n\n### Step 1: Base Asset Deployment\nDeposit liquid SOL into Kamino to mint kSOL (8.2% base staking yield).\n\n### Step 2: Leverage Loop Structure\n• Borrow USDC against kSOL collateral at conservative 60% LTV\n• Swap 50% USDC back into SOL\n• Provide concentrated LP in Orca SOL/USDC Whirlpool tight range (±5%)\n• Stake resulting LP tokens into Kamino Multiply vault\n\n### Yield Breakdown\n| Source | Net APY |\n|---|---|\n| Liquid Staking Yield | 8.2% |\n| Orca Trading Fees (Concentrated) | 48.0% |\n| Recursive 3x Leverage Factor | +92.5% |\n| Protocol Token Emissions | ~52.0% |\n| **Total Blended APY** | **~200.7%** |\n\n### Risk Mitigation Matrix ⚠️\n• Impermanent loss if SOL moves >18% outside range within 48h\n• Liquidation trigger threshold: LTV >82%\n• Monitor oracle health and rebalance active LP boundaries every 48 hours`,
     unlocks:203, alphaVotes:156, rugVotes:31, totalEarned:2030, createdAt:Date.now()-259200000,
   },
   {
-    id:'a4', title:'5 NFT Blue-Chip yang Akan 10x di Bull Run',
+    id:'a4', title:'5 Blue-Chip NFTs Primed for 10x Multiple in Next Cycle',
     author:'@nft_sage', category:'NFT', price:20,
-    teaser:'Setelah bear market, 5 koleksi NFT blue-chip sekarang di floor terendah sepanjang masa. Catalyst besar belum di-price-in oleh market…',
-    fullContent:`## 1. Pudgy Penguins — 8 ETH → 25 ETH\nRetail IP (Walmart), upcoming token.\n\n## 2. Azuki — 5 ETH → 15 ETH\nAnime studio partnership Jepang.\n\n## 3. Milady — 3.5 ETH → 12 ETH\nRemilia ecosystem, cult community.\n\n## 4. DeGods — 2 ETH → 8 ETH\nNew team, cross-chain expansion.\n\n## 5. Bong Bears — 15 ETH → 40 ETH\nBerachain mainnet imminent + airdrop.\n\n## Strategi\n• DCA 2–4 minggu\n• 40% aman / 40% medium / 20% degen\n• Hold minimum 6 bulan`,
+    teaser:'Following the cyclical NFT capitulation, 5 blue-chip intellectual property ecosystems are sitting at historical valuation floors ahead of major consumer brand catalysts…',
+    fullContent:`## 1. Pudgy Penguins — Floor Target: 25 ETH\nGlobal retail IP distribution (Walmart, Target), consumer licensing royalties, and upcoming ecosystem token catalyst.\n\n## 2. Azuki — Floor Target: 15 ETH\nAnime production studio partnerships in Tokyo, Web3 streaming IP, and dedicated AnimeChain layer-2 infrastructure.\n\n## 3. Milady Maker — Floor Target: 12 ETH\nRemilia decentralized media collective, hyper-loyal cultural moat, and viral meme narrative dominance.\n\n## 4. DeGods — Floor Target: 8 ETH\nNew executive team transition, zero-royalty community marketplace, and multi-chain cross-pollination.\n\n## 5. Bong Bears — Floor Target: 40 ETH\nBerachain mainnet launch imminent. Direct validator delegation yield and perpetual airdrop entitlement.\n\n## Execution Playbook\n• Accumulate via DCA over a 2–4 week window\n• 40% Tier-1 Bluechip / 40% Mid-cap IP / 20% Cultural Memetic\n• Minimum investment horizon: 9–14 months`,
     unlocks:67, alphaVotes:45, rugVotes:18, totalEarned:1340, createdAt:Date.now()-345600000,
   },
   {
-    id:'a5', title:'Fed Pivot & Dampak ke Crypto — Macro Deep Dive',
+    id:'a5', title:'Fed Pivot & Crypto Liquidity Cycles — Macro Deep Dive',
     author:'@macro_guru', category:'Macro', price:30,
-    teaser:'Fed meeting berikutnya bisa jadi turning point siklus. Data inflasi dan yield curve menunjukkan sinyal kuat pivot akan lebih cepat dari konsensus…',
-    fullContent:`## Data Macro\n• CPI: 2.3% (target 2%)\n• Unemployment: 4.1%\n• 10Y-2Y Yield: steepening\n• ISM: kontraksi 3 bulan\n\n## Skenario Fed\n| Skenario | Prob |\n|---|---|\n| Cut 25bps | 60% |\n| Hold dovish | 30% |\n| Cut 50bps | 10% |\n\n## Dampak\nRate cut → USD lemah → BTC/ETH pump 15–25%.\nAltseason mulai 2–3 minggu setelah cut.\n\n## Positioning\n1. BTC 50% portfolio\n2. Overweight ETH\n3. SOL + AVAX high-beta\n4. No leverage sampai konfirmasi`,
+    teaser:'Upcoming central bank rate trajectory marks a generational inflection point for risk assets. Inflation telemetry and inverted yield curve unwinds indicate aggressive easing ahead…',
+    fullContent:`## Key Macro Telemetry\n• Core CPI: 2.3% YoY (Target convergence zone)\n• Sahm Rule Recession Indicator: Moderating\n• 10Y-2Y Treasury Curve: Bull steepening regime\n• Global M2 Money Supply: Expanding at fastest pace since 2021\n\n## Easing Scenarios Matrix\n| Federal Reserve Decision | Market Probability | Crypto Market Impact |\n|---|---|---|\n| 25 bps Rate Cut | 65% | Gradual upside rally, BTC leading |\n| 50 bps Dovish Cut | 25% | Initial volatility followed by explosive altseason |\n| Hawkish Pause | 10% | Temporary 5-8% pullback before retest |\n\n## Asset Allocation Recommendations\n1. Bitcoin (BTC): 50% portfolio anchor (Digital monetary asset)\n2. Ethereum (ETH): 25% portfolio (Deflationary gas & staking asset)\n3. Solana (SOL) & High-Beta L1s: 20% (Consumer velocity play)\n4. Liquid Stables (USDC/USDT): 5% dry powder for flash dips`,
     unlocks:54, alphaVotes:41, rugVotes:5, totalEarned:1620, createdAt:Date.now()-432000000,
   },
   {
-    id:'a6', title:'3 Meme Coin Stealth — Belum Launch 🚀',
+    id:'a6', title:'3 Stealth Meme Coins Prior to Tier-1 Exchange Listings 🚀',
     author:'@degen_lord', category:'Meme', price:5,
-    teaser:'3 meme coin dalam fase stealth/pre-launch. Komunitas kecil tapi organik. Ada insider info listing CEX sudah di pipeline. Entry window: minggu ini saja…',
-    fullContent:`## ⚠️ HIGH RISK — 1–3% portfolio only.\n\n## 1. $SPHEREDOG (Unicity)\n• Contract deployed, belum launch\n• 2.800 members Telegram (organik)\n• 2 CEX tier-2 confirmed\n• Target 20–50x\n\n## 2. $MONADPEPE (Monad)\n• First meme di Monad mainnet\n• 5.200 members\n• Catalyst: mainnet launch\n• Buy dalam 5 menit pertama\n\n## 3. $AIGIRL (Base)\n• Stealth launch 5–7 hari lagi\n• AI + anime waifu = viral\n• 3 KOL 500K+ sudah commit\n• DCA jam pertama, jangan FOMO`,
+    teaser:'3 low-cap meme tokens currently trading in stealth pre-launch phases with organic community traction and verified market-maker pipelines before CEX announcements…',
+    fullContent:`## ⚠️ HIGH RISK DEGEN SPECULATION — Maximum 1–3% portfolio risk.\n\n## 1. $SPHEREDOG (Unicity Ecosystem)\n• Contract deployed, fair-launch structure\n• 2,800 active Telegram members (zero paid bot volume)\n• Confirmed market-maker engagement for tier-2 exchange listing\n• Upside Target: 20x – 50x from initial liquidity pool price\n\n## 2. $MONADPEPE (Monad Ecosystem)\n• First culturally aligned meme coin primed for Monad mainnet\n• 5,400 organic community members\n• Primary catalyst: Mainnet ecosystem incentive distribution\n• Strategy: Enter during first 5-10 minutes of liquidity seeding\n\n## 3. $AIGIRL (Base Network)\n• Autonomous AI agent with interactive social media streaming\n• 3 verified crypto KOLs (500K+ reach) committed without presale discounts\n• Fair launch via liquidity bonding curve\n• Execution: DCA in first trading hour, strictly take initial capital off the table at 3x`,
     unlocks:312, alphaVotes:201, rugVotes:89, totalEarned:1560, createdAt:Date.now()-43200000,
   },
 ]
@@ -168,6 +181,52 @@ function loadDemo(): DemoStore | null {
 }
 function saveDemo(d: DemoStore): void {
   localStorage.setItem(DEMO_KEY, JSON.stringify(d))
+}
+
+/* Unlocked IDs persistence */
+function loadUnlocked(): string[] {
+  try {
+    const raw = localStorage.getItem(UNLOCKED_KEY)
+    return raw ? JSON.parse(raw) as string[] : []
+  } catch { return [] }
+}
+function saveUnlocked(ids: string[]): void {
+  try { localStorage.setItem(UNLOCKED_KEY, JSON.stringify(ids)) } catch { /* ignore */ }
+}
+
+/* Transaction history persistence */
+function loadTxHistory(): TxRecord[] {
+  try {
+    const raw = localStorage.getItem(TX_KEY)
+    if (raw) return JSON.parse(raw) as TxRecord[]
+    return [
+      {
+        id: 'tx_init_1',
+        type: 'earn',
+        title: 'Monad Testnet Airdrop Strategy',
+        amount: 15,
+        counterparty: '@whale99',
+        timestamp: Date.now() - 3600000 * 3,
+        txHash: '0x8f2a49b1c7e094',
+        status: 'confirmed',
+      },
+      {
+        id: 'tx_init_2',
+        type: 'earn',
+        title: 'Whale On-Chain Accumulation BTC',
+        amount: 25,
+        counterparty: '@degen_ser',
+        timestamp: Date.now() - 3600000 * 8,
+        txHash: '0x3b190fe721dc58',
+        status: 'confirmed',
+      },
+    ]
+  } catch {
+    return []
+  }
+}
+function saveTxHistory(list: TxRecord[]): void {
+  try { localStorage.setItem(TX_KEY, JSON.stringify(list)) } catch { /* ignore */ }
 }
 
 /* User vote persistence */
@@ -230,13 +289,16 @@ export default function App() {
   const [alphas, setAlphas]         = useState<AlphaPost[]>(() => [...loadCustomAlphas(), ...SEED])
   const [userVotes, setUserVotes]   = useState<Record<string, 'alpha' | 'rug'>>(loadUserVotes)
   const [ticker, setTicker]         = useState<string[]>(
-    ['🔥 @whale99 unlocked "Whale BTC Q4" — 25 UCT','⚡ @degen_ser unlocked "Meme Coin Stealth" — 5 UCT','🚀 @alpha_sniper unlocked "DeFi Yield 200%" — 10 UCT','💎 @moon_chaser unlocked "Airdrop Monad" — 15 UCT','👑 @diamond_paws voted ALPHA 🔥 on "Fed Pivot"'],
+    ['🔥 @whale99 unlocked "Whale BTC Q4" — 25 UCT','⚡ @degen_ser unlocked "Meme Coin Stealth" — 5 UCT','🚀 @alpha_sniper unlocked "DeFi Yield 200%" — 10 UCT','💎 @moon_chaser unlocked "Monad Airdrop" — 15 UCT','👑 @diamond_paws voted ALPHA 🔥 on "Fed Pivot"'],
   )
   const [tab, setTab]               = useState<Tab>('feed')
   const [bumpQ, setBumpQ]           = useState<string[]>([])
   const [shakingId, setShakingId]   = useState<string | null>(null)
   const [glowId, setGlowId]        = useState<string | null>(null)
-  const [unlocked, setUnlocked]     = useState<Set<string>>(new Set())
+  const [unlocked, setUnlocked]     = useState<Set<string>>(() => new Set(loadUnlocked()))
+  const [transactions, setTransactions] = useState<TxRecord[]>(loadTxHistory)
+  const [dashTab, setDashTab]       = useState<'published' | 'library' | 'history'>('published')
+  const [txFilter, setTxFilter]     = useState<'all' | 'unlock' | 'earn' | 'publish'>('all')
   const [readAlpha, setReadAlpha]   = useState<AlphaPost | null>(null)
   const [demoModal, setDemoModal]   = useState(false)
   const [toast, setToast]           = useState<{ msg: string; ok: boolean } | null>(null)
@@ -273,7 +335,11 @@ export default function App() {
     const d = loadDemo()
     if (d) {
       setW({ status:'demo', nametag:d.nametag, address:'DIRECT://demo', balance:d.balance, sessionId:'demo', client:null, uctCoinId: UCT_COIN_ID })
-      setUnlocked(new Set(d.unlockedIds))
+      setUnlocked(prev => {
+        const merged = new Set([...prev, ...d.unlockedIds])
+        saveUnlocked([...merged])
+        return merged
+      })
     }
   }, [])
 
@@ -369,7 +435,7 @@ export default function App() {
   const activateDemo = useCallback((p: { nametag: string; balance: number }) => {
     setW({ status:'demo', nametag:p.nametag, address:'DIRECT://demo_'+uid(), balance:p.balance, sessionId:'demo', client:null, uctCoinId: UCT_COIN_ID })
     setDemoModal(false)
-    flash(`🧪 Demo: ${p.nametag} (${p.balance} UCT)`)
+    flash(`🧪 Demo profile: ${p.nametag} (${p.balance} UCT)`)
   }, [flash])
 
   /* ── disconnect ────────────────────────────── */
@@ -378,7 +444,6 @@ export default function App() {
     sessionStorage.removeItem(SESSION_KEY)
     localStorage.removeItem(DEMO_KEY)
     setW({ status:'disconnected', nametag:'', address:'', balance:0, sessionId:'', client:null, uctCoinId: UCT_COIN_ID })
-    setUnlocked(new Set())
     flash('Disconnected')
   }, [w.client, flash])
 
@@ -415,8 +480,36 @@ export default function App() {
       /* Demo mode — just deduct locally */
       setW(prev => ({ ...prev, balance: prev.balance - alpha.price }))
     }
-    setAlphas(prev => prev.map(a => a.id === alpha.id ? { ...a, unlocks: a.unlocks + 1, totalEarned: a.totalEarned + alpha.price } : a))
-    setUnlocked(prev => new Set(prev).add(alpha.id))
+
+    setAlphas(prev => {
+      const next = prev.map(a => a.id === alpha.id ? { ...a, unlocks: a.unlocks + 1, totalEarned: a.totalEarned + alpha.price } : a)
+      saveCustomAlphas(next)
+      return next
+    })
+
+    setUnlocked(prev => {
+      const next = new Set(prev).add(alpha.id)
+      saveUnlocked([...next])
+      return next
+    })
+
+    /* Add to transaction history */
+    const tx: TxRecord = {
+      id: 'tx_' + uid(),
+      type: 'unlock',
+      title: alpha.title,
+      amount: alpha.price,
+      counterparty: alpha.author,
+      timestamp: Date.now(),
+      txHash: '0x' + uid() + uid(),
+      status: 'confirmed',
+    }
+    setTransactions(prev => {
+      const next = [tx, ...prev]
+      saveTxHistory(next)
+      return next
+    })
+
     setTicker(t => [`⚡ ${w.nametag || 'anon'} unlocked "${alpha.title.slice(0,26)}…" — ${alpha.price} UCT`, ...t].slice(0, 50))
     bump(alpha.id)
     flash(`🔓 Unlocked! −${alpha.price} UCT`)
@@ -427,9 +520,31 @@ export default function App() {
   /* ── simulate buy ──────────────────────────── */
   const simBuy = useCallback(() => {
     const a = pick(alphas), u = pick(FAKE_READERS)
-    setAlphas(prev => prev.map(x => x.id === a.id ? { ...x, unlocks: x.unlocks + 1, totalEarned: x.totalEarned + x.price } : x))
+    setAlphas(prev => {
+      const next = prev.map(x => x.id === a.id ? { ...x, unlocks: x.unlocks + 1, totalEarned: x.totalEarned + x.price } : x)
+      saveCustomAlphas(next)
+      return next
+    })
     setTicker(t => [`🔥 ${u} unlocked "${a.title.slice(0,26)}…" — ${a.price} UCT`, ...t].slice(0, 50))
-    bump(a.id); flash(`⚡ ${u} bought alpha!`)
+    bump(a.id)
+    flash(`⚡ ${u} unlocked alpha!`)
+
+    /* Add simulated transaction record */
+    const tx: TxRecord = {
+      id: 'tx_' + uid(),
+      type: 'earn',
+      title: a.title,
+      amount: a.price,
+      counterparty: u,
+      timestamp: Date.now(),
+      txHash: '0x' + uid() + uid(),
+      status: 'confirmed',
+    }
+    setTransactions(prev => {
+      const next = [tx, ...prev]
+      saveTxHistory(next)
+      return next
+    })
   }, [alphas, bump, flash])
 
   /* ── vote (mutually exclusive with undo/toggle) ── */
@@ -437,7 +552,7 @@ export default function App() {
     const currentVote = userVotes[id]
 
     if (currentVote === kind) {
-      /* UNDO / BATALKAN VOTE: user menekan tombol yang sama lagi */
+      /* UNDO vote: user clicks the same button again */
       setUserVotes(prev => {
         const next = { ...prev }
         delete next[id]
@@ -466,9 +581,9 @@ export default function App() {
         } : r)
       }
 
-      flash(kind === 'alpha' ? '↩️ Vote ALPHA dibatalkan' : '↩️ Vote RUG dibatalkan')
+      flash(kind === 'alpha' ? '↩️ Alpha vote cancelled' : '↩️ Rug vote cancelled')
     } else if (currentVote) {
-      /* GANTI PILIHAN: user berpindah dari pilihan sebelumnya */
+      /* SWITCH vote: user changes mind to the other option */
       setUserVotes(prev => {
         const next = { ...prev, [id]: kind }
         saveUserVotes(next)
@@ -496,9 +611,9 @@ export default function App() {
         } : r)
       }
 
-      flash(kind === 'alpha' ? '🔥 Ganti pilihan: Voted ALPHA!' : '💩 Ganti pilihan: Voted RUG!')
+      flash(kind === 'alpha' ? '🔥 Switched vote: ALPHA!' : '💩 Switched vote: RUG!')
     } else {
-      /* VOTE PERTAMA KALI */
+      /* FIRST VOTE */
       setUserVotes(prev => {
         const next = { ...prev, [id]: kind }
         saveUserVotes(next)
@@ -532,8 +647,8 @@ export default function App() {
 
   /* ── publish ───────────────────────────────── */
   const doPublish = useCallback(() => {
-    if (!uTitle.trim() || !uTeaser.trim() || !uBody.trim()) { flash('⚠️ Isi semua bidang wajib', false); return }
-    if (uPrice < 1 || isNaN(uPrice)) { flash('⚠️ Harga minimal 1 UCT', false); return }
+    if (!uTitle.trim() || !uTeaser.trim() || !uBody.trim()) { flash('⚠️ Please fill in all required fields', false); return }
+    if (uPrice < 1 || isNaN(uPrice)) { flash('⚠️ Minimum price is 1 UCT', false); return }
     const a: AlphaPost = {
       id: uid(), title: uTitle.trim(), author: w.nametag || shortAddr(w.address),
       category: uCat, price: Math.max(1, Math.round(uPrice)), teaser: uTeaser.trim(), fullContent: uBody.trim(),
@@ -545,20 +660,40 @@ export default function App() {
       saveCustomAlphas(next)
       return next
     })
+
+    /* Add publication transaction record */
+    const tx: TxRecord = {
+      id: 'tx_' + uid(),
+      type: 'publish',
+      title: a.title,
+      amount: 0,
+      counterparty: 'Unicity Network',
+      timestamp: Date.now(),
+      txHash: '0x' + uid() + uid(),
+      status: 'confirmed',
+    }
+    setTransactions(prev => {
+      const next = [tx, ...prev]
+      saveTxHistory(next)
+      return next
+    })
+
     bump(a.id)
     setTicker(t => [`📝 ${a.author} posted "${a.title.slice(0,28)}…"`, ...t].slice(0, 50))
     setUTitle(''); setUTeaser(''); setUBody(''); setUPrice(10); setUPdf('')
     if (pdfInputRef.current) pdfInputRef.current.value = ''
-    setTab('feed'); flash('✅ Alpha berhasil dipublikasikan!')
+    setTab('feed'); flash('✅ Alpha published successfully!')
   }, [uTitle, uTeaser, uBody, uCat, uPrice, uPdf, w.nametag, w.address, bump, flash])
 
   /* ── derived ───────────────────────────────── */
-  const king      = alphas.reduce((b, a) => a.totalEarned > b.totalEarned ? a : b, alphas[0])
-  const myTag     = w.nametag || (connected ? shortAddr(w.address) : '')
-  const myAlphas  = alphas.filter(a => a.author === myTag)
-  const myEarned  = myAlphas.reduce((s, a) => s + a.totalEarned, 0)
-  const myReads   = myAlphas.reduce((s, a) => s + a.unlocks, 0)
-  const sorted    = [
+  const king           = alphas.reduce((b, a) => a.totalEarned > b.totalEarned ? a : b, alphas[0])
+  const myTag          = w.nametag || (connected ? shortAddr(w.address) : '')
+  const myAlphas       = alphas.filter(a => a.author === myTag)
+  const myEarned       = myAlphas.reduce((s, a) => s + a.totalEarned, 0)
+  const myReads        = myAlphas.reduce((s, a) => s + a.unlocks, 0)
+  const unlockedAlphas = alphas.filter(a => unlocked.has(a.id))
+  const filteredTx     = transactions.filter(t => txFilter === 'all' || t.type === txFilter)
+  const sorted         = [
     ...bumpQ.map(id => alphas.find(a => a.id === id)).filter(Boolean) as AlphaPost[],
     ...alphas.filter(a => !bumpQ.includes(a.id)).sort((a, b) => b.createdAt - a.createdAt),
   ]
@@ -623,11 +758,48 @@ export default function App() {
 
           {/* Tabs */}
           <div className="flex gap-1 mt-2">
-            {([['feed', 'Alpha Feed', <Sparkles key="i" className="w-3.5 h-3.5" />], ['publish', 'Publish Alpha', <Upload key="i" className="w-3.5 h-3.5" />], ['dashboard', 'Creator Dashboard', <BarChart3 key="i" className="w-3.5 h-3.5" />]] as [Tab, string, ReactNode][]).map(([k, label, icon]) => (
-              <button key={k} onClick={() => { if (k !== 'feed' && !connected) { flash('⚠️ Connect wallet first', false); return } setTab(k) }}
+            {([
+              ['feed', 'Alpha Feed', <Sparkles key="f" className="w-3.5 h-3.5" />],
+              ['library', 'My Library', <BookOpen key="l" className="w-3.5 h-3.5" />, unlockedAlphas.length],
+              ['publish', 'Publish Alpha', <Upload key="p" className="w-3.5 h-3.5" />],
+              ['dashboard', 'Creator & Activity', <BarChart3 key="d" className="w-3.5 h-3.5" />, transactions.length],
+            ] as [Tab, string, ReactNode, number?][]).map(([k, label, icon, badge]) => (
+              <button
+                key={k}
+                onClick={() => {
+                  if ((k === 'publish' || k === 'dashboard') && !connected) {
+                    flash('⚠️ Connect wallet first', false)
+                    return
+                  }
+                  setTab(k)
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-t-lg cursor-pointer transition-colors"
-                style={tab === k ? { background: 'rgba(255,255,255,.06)', color: '#F1F5F9', borderTop: '1px solid rgba(255,87,34,.35)', borderLeft: '1px solid rgba(255,255,255,.06)', borderRight: '1px solid rgba(255,255,255,.06)' } : { color: 'rgba(148,163,184,.5)' }}>
-                {icon}{label}
+                style={
+                  tab === k
+                    ? {
+                        background: 'rgba(255,255,255,.06)',
+                        color: '#F1F5F9',
+                        borderTop: '1px solid rgba(255,87,34,.35)',
+                        borderLeft: '1px solid rgba(255,255,255,.06)',
+                        borderRight: '1px solid rgba(255,255,255,.06)',
+                      }
+                    : { color: 'rgba(148,163,184,.5)' }
+                }
+              >
+                {icon}
+                <span>{label}</span>
+                {typeof badge === 'number' && badge > 0 && (
+                  <span
+                    className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold"
+                    style={{
+                      background: k === 'library' ? 'rgba(56,189,248,.15)' : 'rgba(255,87,34,.15)',
+                      color: k === 'library' ? '#38BDF8' : '#FF5722',
+                      border: `1px solid ${k === 'library' ? 'rgba(56,189,248,.3)' : 'rgba(255,87,34,.3)'}`,
+                    }}
+                  >
+                    {badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -716,6 +888,58 @@ export default function App() {
           </div>
         )}
 
+        {/* === MY LIBRARY (UNLOCKED ALPHAS) === */}
+        {tab === 'library' && (
+          <div className="anim-fade-up">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-1" style={{ fontFamily: 'Space Grotesk,sans-serif' }}>
+                  <BookOpen className="w-5 h-5" style={{ color: '#38BDF8' }} /> My Library — Unlocked Research & PDFs
+                </h2>
+                <p className="text-xs" style={{ color: 'rgba(148,163,184,.6)' }}>
+                  All research reports and documents you have unlocked with UCT. Available to re-read anytime.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold" style={{ background: 'rgba(56,189,248,.08)', border: '1px solid rgba(56,189,248,.25)', color: '#38BDF8', fontFamily: 'JetBrains Mono,monospace' }}>
+                <Check className="w-3.5 h-3.5" />
+                <span>{unlockedAlphas.length} Unlocked Reports</span>
+              </div>
+            </div>
+
+            {unlockedAlphas.length === 0 ? (
+              <div className="rounded-2xl p-12 text-center" style={{ background: 'rgba(12,13,20,.6)', border: '1px dashed rgba(255,255,255,.08)' }}>
+                <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30 text-[#38BDF8]" />
+                <h3 className="text-sm font-bold text-white mb-1">Your library is empty</h3>
+                <p className="text-xs max-w-md mx-auto mb-5" style={{ color: 'rgba(148,163,184,.5)' }}>
+                  You haven't unlocked any alpha reports yet. Browse the Alpha Feed and unlock research or leak reports with UCT to read them here anytime.
+                </p>
+                <button
+                  onClick={() => setTab('feed')}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white cursor-pointer transition-all"
+                  style={{ background: 'linear-gradient(135deg,#FF5722,#FF8A00)', boxShadow: '0 4px 18px rgba(255,87,34,.25)' }}
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Browse Alpha Feed
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {unlockedAlphas.map(a => (
+                  <Card
+                    key={a.id}
+                    a={a}
+                    shaking={shakingId === a.id}
+                    glowing={glowId === a.id}
+                    open={true}
+                    onUnlock={() => setReadAlpha(a)}
+                    onVote={doVote}
+                    userVote={userVotes[a.id]}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* === PUBLISH === */}
         {tab === 'publish' && (
           <div className="max-w-2xl mx-auto anim-fade-up">
@@ -736,7 +960,7 @@ export default function App() {
                 {!uPdf ? (
                   <label className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-dashed border-white/10 hover:border-[#FF5722]/50 hover:bg-white/[0.02] cursor-pointer text-sm text-slate-400 hover:text-white transition-all">
                     <FileText className="w-4 h-4 text-[#FF5722]" />
-                    <span>Pilih file PDF riset/dokumen kamu...</span>
+                    <span>Choose PDF research / document file...</span>
                     <input
                       ref={pdfInputRef}
                       type="file"
@@ -754,7 +978,7 @@ export default function App() {
                       <FileText className="w-4 h-4 text-[#38BDF8] flex-shrink-0" />
                       <span className="text-sm font-medium text-slate-200 truncate">{uPdf}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/10 text-[#38BDF8] border border-sky-500/20 flex-shrink-0">
-                        PDF Terlampir
+                        PDF Attached
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -762,21 +986,21 @@ export default function App() {
                         type="button"
                         onClick={() => pdfInputRef.current?.click()}
                         className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 transition-colors cursor-pointer"
-                        title="Pilih file PDF lain"
+                        title="Choose another PDF file"
                       >
-                        Ganti
+                        Replace
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           setUPdf('')
                           if (pdfInputRef.current) pdfInputRef.current.value = ''
-                          flash('📎 Lampiran PDF dibatalkan')
+                          flash('📎 PDF attachment removed')
                         }}
                         className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-colors cursor-pointer"
-                        title="Batalkan / Hapus lampiran PDF"
+                        title="Remove PDF attachment"
                       >
-                        <X className="w-3.5 h-3.5" /> Batal
+                        <X className="w-3.5 h-3.5" /> Remove
                       </button>
                     </div>
                     <input
@@ -841,22 +1065,216 @@ export default function App() {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: 'rgba(148,163,184,.6)' }}>
-                <BookOpen className="w-3.5 h-3.5" /> My Published Alphas
-              </h3>
-              <span className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-white/[0.02] px-2.5 py-1 rounded-full border border-white/[0.05]">
-                <Shield className="w-3 h-3 text-[#FF5722]" /> Read-Only (Published & Immutable)
-              </span>
+
+            {/* Subtabs Switcher */}
+            <div className="flex flex-wrap items-center gap-2 mb-6 border-b pb-3" style={{ borderColor: 'rgba(255,255,255,.07)' }}>
+              <button
+                onClick={() => setDashTab('published')}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                style={
+                  dashTab === 'published'
+                    ? { background: 'rgba(255,87,34,.15)', color: '#FF5722', border: '1px solid rgba(255,87,34,.3)' }
+                    : { background: 'rgba(255,255,255,.03)', color: 'rgba(148,163,184,.6)', border: '1px solid rgba(255,255,255,.05)' }
+                }
+              >
+                <BookOpen className="w-3.5 h-3.5" /> Published Alphas ({myAlphas.length})
+              </button>
+              <button
+                onClick={() => setDashTab('library')}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                style={
+                  dashTab === 'library'
+                    ? { background: 'rgba(56,189,248,.15)', color: '#38BDF8', border: '1px solid rgba(56,189,248,.3)' }
+                    : { background: 'rgba(255,255,255,.03)', color: 'rgba(148,163,184,.6)', border: '1px solid rgba(255,255,255,.05)' }
+                }
+              >
+                <Check className="w-3.5 h-3.5" /> Unlocked Library ({unlockedAlphas.length})
+              </button>
+              <button
+                onClick={() => setDashTab('history')}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                style={
+                  dashTab === 'history'
+                    ? { background: 'rgba(16,185,129,.15)', color: '#10B981', border: '1px solid rgba(16,185,129,.3)' }
+                    : { background: 'rgba(255,255,255,.03)', color: 'rgba(148,163,184,.6)', border: '1px solid rgba(255,255,255,.05)' }
+                }
+              >
+                <History className="w-3.5 h-3.5" /> Transaction History ({transactions.length})
+              </button>
             </div>
-            {myAlphas.length === 0 ? (
-              <div className="rounded-2xl p-10 text-center" style={{ background: 'rgba(12,13,20,.5)', border: '1px dashed rgba(255,255,255,.07)' }}>
-                <Upload className="w-8 h-8 mx-auto mb-3 opacity-25" /><p className="text-sm" style={{ color: 'rgba(148,163,184,.45)' }}>No alpha published yet.</p>
-                <button onClick={() => setTab('publish')} className="mt-3 text-xs cursor-pointer" style={{ color: '#FF5722' }}>→ Publish first alpha</button>
+
+            {/* Subtab: Published */}
+            {dashTab === 'published' && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: 'rgba(148,163,184,.6)' }}>
+                    <BookOpen className="w-3.5 h-3.5" /> My Published Alphas
+                  </h3>
+                  <span className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-white/[0.02] px-2.5 py-1 rounded-full border border-white/[0.05]">
+                    <Shield className="w-3 h-3 text-[#FF5722]" /> Read-Only (Published & Immutable)
+                  </span>
+                </div>
+                {myAlphas.length === 0 ? (
+                  <div className="rounded-2xl p-10 text-center" style={{ background: 'rgba(12,13,20,.5)', border: '1px dashed rgba(255,255,255,.07)' }}>
+                    <Upload className="w-8 h-8 mx-auto mb-3 opacity-25" />
+                    <p className="text-sm" style={{ color: 'rgba(148,163,184,.45)' }}>No alpha published yet.</p>
+                    <button onClick={() => setTab('publish')} className="mt-3 text-xs cursor-pointer" style={{ color: '#FF5722' }}>
+                      → Publish first alpha
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {myAlphas.map(a => (
+                      <Card
+                        key={a.id}
+                        a={a}
+                        shaking={false}
+                        glowing={false}
+                        open
+                        onUnlock={() => setReadAlpha(a)}
+                        onVote={doVote}
+                        owner
+                        userVote={userVotes[a.id]}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {myAlphas.map(a => <Card key={a.id} a={a} shaking={false} glowing={false} open onUnlock={() => setReadAlpha(a)} onVote={doVote} owner userVote={userVotes[a.id]} />)}
+            )}
+
+            {/* Subtab: Library */}
+            {dashTab === 'library' && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: '#38BDF8' }}>
+                    <BookOpen className="w-3.5 h-3.5" /> My Unlocked Alphas & PDFs ({unlockedAlphas.length})
+                  </h3>
+                  <span className="text-[11px] text-slate-400">
+                    Unlimited lifetime re-reading access
+                  </span>
+                </div>
+                {unlockedAlphas.length === 0 ? (
+                  <div className="rounded-2xl p-10 text-center" style={{ background: 'rgba(12,13,20,.5)', border: '1px dashed rgba(255,255,255,.07)' }}>
+                    <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-25 text-[#38BDF8]" />
+                    <p className="text-sm" style={{ color: 'rgba(148,163,184,.45)' }}>You haven't unlocked any alpha reports yet.</p>
+                    <button onClick={() => setTab('feed')} className="mt-3 text-xs cursor-pointer" style={{ color: '#FF5722' }}>
+                      → Browse Alpha Feed
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {unlockedAlphas.map(a => (
+                      <Card
+                        key={a.id}
+                        a={a}
+                        shaking={shakingId === a.id}
+                        glowing={glowId === a.id}
+                        open
+                        onUnlock={() => setReadAlpha(a)}
+                        onVote={doVote}
+                        userVote={userVotes[a.id]}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Subtab: History */}
+            {dashTab === 'history' && (
+              <div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="text-xs font-bold flex items-center gap-2" style={{ color: '#10B981' }}>
+                      <History className="w-3.5 h-3.5" /> Transaction Ledger & Activity
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      On-chain payments, creator payouts, and alpha publication records
+                    </p>
+                  </div>
+                  {/* Filters */}
+                  <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5 text-[11px]">
+                    {(['all', 'unlock', 'earn', 'publish'] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setTxFilter(f)}
+                        className="px-2.5 py-1 rounded-lg capitalize transition-colors cursor-pointer"
+                        style={
+                          txFilter === f
+                            ? { background: 'rgba(255,255,255,.1)', color: '#FFF', fontWeight: 600 }
+                            : { color: 'rgba(148,163,184,.5)' }
+                        }
+                      >
+                        {f === 'all' ? `All (${transactions.length})` : f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {filteredTx.length === 0 ? (
+                  <div className="rounded-2xl p-10 text-center" style={{ background: 'rgba(12,13,20,.5)', border: '1px dashed rgba(255,255,255,.07)' }}>
+                    <Clock className="w-8 h-8 mx-auto mb-3 opacity-25 text-slate-500" />
+                    <p className="text-sm" style={{ color: 'rgba(148,163,184,.45)' }}>No transactions found for this filter.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border" style={{ background: 'rgba(12,13,20,.8)', borderColor: 'rgba(255,255,255,.07)' }}>
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,.06)', color: 'rgba(148,163,184,.5)' }}>
+                          <th className="py-3 px-4 font-semibold">Type</th>
+                          <th className="py-3 px-4 font-semibold">Title / Description</th>
+                          <th className="py-3 px-4 font-semibold">Counterparty</th>
+                          <th className="py-3 px-4 font-semibold">Amount</th>
+                          <th className="py-3 px-4 font-semibold">Date & Time</th>
+                          <th className="py-3 px-4 font-semibold">Tx Hash / Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y" style={{ borderColor: 'rgba(255,255,255,.04)' }}>
+                        {filteredTx.map(tx => (
+                          <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {tx.type === 'unlock' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                                  <ArrowUpRight className="w-3 h-3" /> Pay-to-Read
+                                </span>
+                              )}
+                              {tx.type === 'earn' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-[#10B981] border border-emerald-500/20">
+                                  <ArrowDownLeft className="w-3 h-3" /> Reader Payout
+                                </span>
+                              )}
+                              {tx.type === 'publish' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-[#38BDF8] border border-sky-500/20">
+                                  <Upload className="w-3 h-3" /> Published
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 max-w-xs font-medium text-slate-200 truncate">
+                              {tx.title}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px]" style={{ color: '#A78BFA' }}>
+                              {tx.counterparty}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap font-mono font-bold">
+                              {tx.type === 'unlock' && <span className="text-red-400">−{tx.amount} UCT</span>}
+                              {tx.type === 'earn' && <span className="text-[#10B981]">+{tx.amount} UCT</span>}
+                              {tx.type === 'publish' && <span className="text-slate-500">Free</span>}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap text-slate-400 text-[11px]">
+                              {ago(tx.timestamp)}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap font-mono text-[10px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                <span className="text-slate-500 truncate max-w-[90px]" title={tx.txHash}>{tx.txHash.slice(0, 10)}…</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -880,8 +1298,8 @@ export default function App() {
         <div className="fixed inset-0 z-50 modal-bg flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setDemoModal(false) }}>
           <div className="w-full max-w-sm rounded-2xl p-6 anim-fade-up" style={{ background: 'rgba(10,10,18,.98)', border: '1px solid rgba(255,255,255,.08)' }}>
             <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Wallet className="w-5 h-5" style={{ color: '#FF5722' }} /><h3 className="font-bold text-white" style={{ fontFamily: 'Space Grotesk,sans-serif' }}>Sphere Wallet Connect</h3></div><button onClick={() => setDemoModal(false)} className="text-slate-500 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button></div>
-            <p className="text-xs mb-1" style={{ color: 'rgba(148,163,184,.5)' }}>Sphere Wallet tidak terdeteksi (localhost/dev). Pilih profil demo:</p>
-            <div className="rounded-xl p-3 mb-4 text-xs" style={{ background: 'rgba(255,87,34,.05)', border: '1px solid rgba(255,87,34,.18)', color: 'rgba(255,138,0,.75)' }}>ℹ️ Di production, identitas langsung dari Sphere Wallet user via ConnectClient.</div>
+            <p className="text-xs mb-1" style={{ color: 'rgba(148,163,184,.5)' }}>Sphere Wallet not detected (localhost/preview). Select a demo profile:</p>
+            <div className="rounded-xl p-3 mb-4 text-xs" style={{ background: 'rgba(255,87,34,.05)', border: '1px solid rgba(255,87,34,.18)', color: 'rgba(255,138,0,.75)' }}>ℹ️ In production, identity connects directly from user's Sphere Wallet via ConnectClient.</div>
             <div className="space-y-2">
               {DEMO_PROFILES.map(p => (
                 <button key={p.nametag} onClick={() => activateDemo(p)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left cursor-pointer transition-all hover:border-[rgba(255,87,34,.25)]" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)' }}>
@@ -968,7 +1386,7 @@ function Card({ a, shaking, glowing, open, onUnlock, onVote, owner, userVote }: 
             onClick={() => onUnlock(a)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
             style={{ background: 'rgba(255,87,34,.08)', color: '#FF5722', border: '1px solid rgba(255,87,34,.2)' }}
-            title="Read-only: Preview dokumen kamu"
+            title="Read-only: Preview your publication"
           >
             <Eye className="w-3.5 h-3.5" /> View Alpha (Read-Only)
           </button>
@@ -982,7 +1400,7 @@ function Card({ a, shaking, glowing, open, onUnlock, onVote, owner, userVote }: 
             <button
               type="button"
               onClick={() => onVote(a.id, 'alpha')}
-              title={userVote === 'alpha' ? 'Batalkan vote Alpha (Undo)' : 'Vote Alpha 🔥'}
+              title={userVote === 'alpha' ? 'Cancel Alpha vote (Undo)' : 'Vote Alpha 🔥'}
               className="px-2.5 py-2 rounded-xl cursor-pointer transition-all flex items-center justify-center"
               style={
                 userVote === 'alpha'
@@ -995,7 +1413,7 @@ function Card({ a, shaking, glowing, open, onUnlock, onVote, owner, userVote }: 
             <button
               type="button"
               onClick={() => onVote(a.id, 'rug')}
-              title={userVote === 'rug' ? 'Batalkan vote Rug (Undo)' : 'Vote Rug 💩'}
+              title={userVote === 'rug' ? 'Cancel Rug vote (Undo)' : 'Vote Rug 💩'}
               className="px-2.5 py-2 rounded-xl cursor-pointer transition-all flex items-center justify-center"
               style={
                 userVote === 'rug'
@@ -1053,7 +1471,7 @@ function ReadModal({ alpha, isOpen, onClose, onUnlock, onVote, userVote }: {
                   <p className="text-xs font-semibold" style={{ color: 'rgba(148,163,184,.6)' }}>Rate this alpha:</p>
                   {userVote && (
                     <span className="text-[11px] text-slate-400">
-                      💡 Pencet tombol yang sama lagi untuk membatalkan (undo)
+                      💡 Click the same button again to cancel your vote (undo)
                     </span>
                   )}
                 </div>
